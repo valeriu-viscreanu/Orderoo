@@ -12,7 +12,8 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(
         builder.Configuration.GetConnectionString("SqlServerConnection")));
 
-builder.Services.AddScoped<IQueryHandler<GetOrderByIdQuery, Order>, GetOrderByIdHandlerQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<GetOrderByIdQuery, Order>, GetOrderByIdQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<GetOrderSummariesQuery, List<OrderSummaryDto>>, GetOrderSummariesQueryHandler>();
 builder.Services.AddScoped<ICommandHandler<CreateOrderCommand, Order>, CreateOrderCommandHandler>();
 builder.Services.AddScoped<IValidator<CreateOrderCommand>, CreateOrderCommandValidator>();
 
@@ -23,7 +24,7 @@ app.UseHttpsRedirection();
 // GET /api/orders
 app.MapGet("/api/orders/{id}", async (int id, IQueryHandler<GetOrderByIdQuery, Order> handler, CancellationToken cancellationToken) =>
 {
-    var order = await handler.Handle(new GetOrderByIdQuery { OrderId = id }, cancellationToken);
+    var order = await handler.HandleAsync(new GetOrderByIdQuery { OrderId = id }, cancellationToken);
 
     if (order is null)
     {
@@ -31,6 +32,19 @@ app.MapGet("/api/orders/{id}", async (int id, IQueryHandler<GetOrderByIdQuery, O
     }
 
     return Results.Ok(order);
+});
+
+
+app.MapGet("/api/orders", async (IQueryHandler<GetOrderSummariesQuery, List<OrderSummaryDto>> handler, CancellationToken cancellationToken) =>
+{
+    var orders = await handler.HandleAsync(new GetOrderSummariesQuery(), cancellationToken);
+
+    if (orders is null)
+    {
+        return Results.NotFound("No orders found.");
+    }
+
+    return Results.Ok(orders);
 });
 
 // POST /api/orders

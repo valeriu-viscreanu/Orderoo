@@ -7,6 +7,11 @@ Accept: application/json
 
 ###
 
+GET {{OrderApi_HostAddress}}/api/orders
+Accept: application/json
+
+###
+
 ### Create order
 POST {{OrderApi_HostAddress}}/api/orders
 Content-Type: application/json
