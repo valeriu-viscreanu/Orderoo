@@ -1,15 +1,21 @@
-﻿using OrderApi.Commands;
+using OrderApi.Commands;
 using OrderApi.Data;
 using OrderManagement.Models;
 
 namespace OrderApi.Handlers
 {
-    public class CreateOrderCommandHandler
+    public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Order>
     {
+        private readonly AppDbContext _context;
 
-        public static async Task<Order> Handle(
+        public CreateOrderCommandHandler(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Order> Handle(
             CreateOrderCommand command,
-            AppDbContext context)
+            CancellationToken cancellationToken = default)
         {
             var order = new Order
             {
@@ -20,8 +26,8 @@ namespace OrderApi.Handlers
                 CreatedAt = DateTime.UtcNow
             };
 
-            context.Orders.Add(order);
-            await context.SaveChangesAsync();
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync(cancellationToken);
 
             return order;
         }

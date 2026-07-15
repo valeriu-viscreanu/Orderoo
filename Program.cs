@@ -11,14 +11,17 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(
         builder.Configuration.GetConnectionString("SqlServerConnection")));
 
+builder.Services.AddScoped<IQueryHandler<GetOrderByIdQuery, Order>, GetOrderByIdHandlerQueryHandler>();
+builder.Services.AddScoped<ICommandHandler<CreateOrderCommand, Order>, CreateOrderCommandHandler>();
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();
 
 // GET /api/orders
-app.MapGet("/api/orders/{id}", async (AppDbContext db, int id) =>
+app.MapGet("/api/orders/{id}", async (int id, IQueryHandler<GetOrderByIdQuery, Order> handler, CancellationToken cancellationToken) =>
 {
-    var order = await GetOrderByIdHandlerQueryHandler.Handle(new GetOrderByIdQuery { OrderId = id }, db);
+    var order = await handler.Handle(new GetOrderByIdQuery { OrderId = id }, cancellationToken);
 
     if (order is null)
     {
@@ -29,9 +32,9 @@ app.MapGet("/api/orders/{id}", async (AppDbContext db, int id) =>
 });
 
 // POST /api/orders
-app.MapPost("/api/orders", async (CreateOrderCommand command, AppDbContext db) =>
+app.MapPost("/api/orders", async (CreateOrderCommand command, ICommandHandler<CreateOrderCommand, Order> handler, CancellationToken cancellationToken) =>
 {
-    var order = await CreateOrderCommandHandler.Handle(command, db);
+    var order = await handler.Handle(command, cancellationToken);
 
     return Results.Created(
         $"/api/orders/{order.OrderId}",
