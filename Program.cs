@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using OrderApi.Commands;
 using OrderApi.Data;
+using OrderApi.Events;
 using OrderApi.Handlers;
 using OrderApi.Queries;
 using OrderManagement.Models;
@@ -12,6 +13,8 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(
         builder.Configuration.GetConnectionString("SqlServerConnection")));
 
+builder.Services.AddSingleton<IEventPublisher, ConsoleEventPublisher>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderCommandValidator>();
 builder.Services.AddScoped<IQueryHandler<GetOrderByIdQuery, Order>, GetOrderByIdQueryHandler>();
 builder.Services.AddScoped<IQueryHandler<GetOrderSummariesQuery, List<OrderSummaryDto>>, GetOrderSummariesQueryHandler>();
 builder.Services.AddScoped<ICommandHandler<CreateOrderCommand, Order>, CreateOrderCommandHandler>();
