@@ -1,7 +1,8 @@
 @OrderApi_HostAddress = http://localhost:5260
+@Order = 5
 
-### Get all orders
-GET {{OrderApi_HostAddress}}/api/orders/2
+### Get order
+GET {{OrderApi_HostAddress}}/api/orders/{{Order}}
 Accept: application/json
 
 ###
@@ -12,8 +13,8 @@ Content-Type: application/json
 
 {
   "orderNumber": "ORD-1001",
-  "firstName": "John",
-  "lastName": "Doe",
+  "firstName": "Johny",
+  "lastName": "Doey",
   "status": "Pending",
   "totalCost": 199.99
 }

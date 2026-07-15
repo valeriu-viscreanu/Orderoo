@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderApi.Commands;
 using OrderApi.Data;
 using OrderApi.Handlers;
 using OrderApi.Queries;
@@ -28,13 +29,9 @@ app.MapGet("/api/orders/{id}", async (AppDbContext db, int id) =>
 });
 
 // POST /api/orders
-app.MapPost("/api/orders", async (Order order, AppDbContext db) =>
+app.MapPost("/api/orders", async (CreateOrderCommand command, AppDbContext db) =>
 {
-    order.OrderId = 0;
-    order.CreatedAt = DateTime.UtcNow;
-
-    db.Orders.Add(order);
-    await db.SaveChangesAsync();
+    var order = await CreateOrderCommandHandler.Handle(command, db);
 
     return Results.Created(
         $"/api/orders/{order.OrderId}",
