@@ -24,9 +24,11 @@ namespace OrderApi.Migrations
 
             modelBuilder.Entity("OrderManagement.Models.Order", b =>
                 {
-                    b.Property<Guid>("OrderId")
+                    b.Property<int>("OrderId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

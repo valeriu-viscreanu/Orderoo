@@ -2,7 +2,7 @@ namespace OrderManagement.Models;
 
 public class Order
 {
-    public Guid OrderId { get; set; }
+    public int OrderId { get; set; }
     public string OrderNumber { get; set; } = string.Empty;
     public required string FirstName { get; set; } = string.Empty;
     public required string LastName { get; set; } = string.Empty;

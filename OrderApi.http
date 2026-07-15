@@ -1,6 +1,21 @@
 @OrderApi_HostAddress = http://localhost:5260
 
-GET {{OrderApi_HostAddress}}/weatherforecast/
+### Get all orders
+GET {{OrderApi_HostAddress}}/api/orders/2
 Accept: application/json
+
+###
+
+### Create order
+POST {{OrderApi_HostAddress}}/api/orders
+Content-Type: application/json
+
+{
+  "orderNumber": "ORD-1001",
+  "firstName": "John",
+  "lastName": "Doe",
+  "status": "Pending",
+  "totalCost": 199.99
+}
 
 ###
