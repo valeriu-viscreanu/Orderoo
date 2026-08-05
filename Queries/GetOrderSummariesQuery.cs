@@ -1,3 +1,6 @@
-﻿namespace OrderApi.Queries;
+using MediatR;
+using System.Collections.Generic;
 
-public record GetOrderSummariesQuery();
+namespace OrderApi.Queries;
+
+public record GetOrderSummariesQuery : IRequest<List<OrderSummaryDto>?>;

@@ -1,4 +1,5 @@
-using FluentValidation;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using OrderApi.Commands;
 using OrderApi.Data;
 using OrderApi.Events;
@@ -6,32 +7,19 @@ using OrderManagement.Models;
 
 namespace OrderApi.Handlers
 {
-    public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Order>
+    public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Order>
     {
         private readonly AppDbContext _context;
-        private readonly IValidator<CreateOrderCommand> _validator;
-        private readonly IEventPublisher _eventPublisher;
+        private readonly IPublisher _publisher;
 
-        public CreateOrderCommandHandler(
-            AppDbContext context, 
-            IValidator<CreateOrderCommand> validator,
-            IEventPublisher eventPublisher)
+        public CreateOrderCommandHandler(AppDbContext context, IPublisher publisher)
         {
             _context = context;
-            _validator = validator;
-            _eventPublisher = eventPublisher;
+            _publisher = publisher;
         }
 
-        public async Task<Order> Handle(
-            CreateOrderCommand command,
-            CancellationToken cancellationToken = default)
+        public async Task<Order> Handle(CreateOrderCommand command, CancellationToken cancellationToken)
         {
-            var validationResult = await _validator.ValidateAsync(command, cancellationToken);
-            if (!validationResult.IsValid)
-            {
-                throw new ValidationException(validationResult.Errors);
-            }
-
             var order = new Order
             {
                 FirstName = command.FirstName,
@@ -43,11 +31,10 @@ namespace OrderApi.Handlers
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync(cancellationToken);
-
-            await _eventPublisher.PublishAsync(new OrderCreatedEvent(
-                order.OrderId, 
-                $"{order.FirstName} {order.LastName}", 
-                order.TotalCost));
+            await _publisher.Publish(new OrderCreatedEvent(
+                order.OrderId,
+                $"{order.FirstName} {order.LastName}",
+                order.TotalCost), cancellationToken);
 
             return order;
         }

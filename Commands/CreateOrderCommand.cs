@@ -1,5 +1,6 @@
-﻿namespace OrderApi.Commands;
+using MediatR;
+using OrderManagement.Models;
 
-public record CreateOrderCommand(string FirstName, string LastName, string Status, decimal TotalCost) { }
+namespace OrderApi.Commands;
 
-
+public record CreateOrderCommand(string FirstName, string LastName, string Status, decimal TotalCost) : IRequest<Order>;

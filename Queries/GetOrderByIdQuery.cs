@@ -1,7 +1,9 @@
-﻿namespace OrderApi.Queries
+using MediatR;
+using OrderManagement.Models;
+
+namespace OrderApi.Queries;
+
+public record GetOrderByIdQuery : IRequest<Order?>
 {
-    public class GetOrderByIdQuery
-    {
-         public int OrderId { get; set; }
-     }
+    public int OrderId { get; init; }
 }

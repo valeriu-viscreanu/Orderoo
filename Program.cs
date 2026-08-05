@@ -1,9 +1,9 @@
 using FluentValidation;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using OrderApi.Behaviors;
 using OrderApi.Commands;
 using OrderApi.Data;
-using OrderApi.Events;
-using OrderApi.Handlers;
 using OrderApi.Queries;
 using OrderManagement.Models;
 
@@ -13,21 +13,23 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(
         builder.Configuration.GetConnectionString("SqlServerConnection")));
 
-builder.Services.AddSingleton<IEventPublisher, ConsoleEventPublisher>();
+// MediatR & Pipeline Behaviors
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
+
 builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderCommandValidator>();
-builder.Services.AddScoped<IQueryHandler<GetOrderByIdQuery, Order>, GetOrderByIdQueryHandler>();
-builder.Services.AddScoped<IQueryHandler<GetOrderSummariesQuery, List<OrderSummaryDto>>, GetOrderSummariesQueryHandler>();
-builder.Services.AddScoped<ICommandHandler<CreateOrderCommand, Order>, CreateOrderCommandHandler>();
-builder.Services.AddScoped<IValidator<CreateOrderCommand>, CreateOrderCommandValidator>();
 
 var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-// GET /api/orders
-app.MapGet("/api/orders/{id}", async (int id, IQueryHandler<GetOrderByIdQuery, Order> handler, CancellationToken cancellationToken) =>
+// GET /api/orders/{id}
+app.MapGet("/api/orders/{id}", async (int id, IMediator mediator, CancellationToken cancellationToken) =>
 {
-    var order = await handler.HandleAsync(new GetOrderByIdQuery { OrderId = id }, cancellationToken);
+    var order = await mediator.Send(new GetOrderByIdQuery { OrderId = id }, cancellationToken);
 
     if (order is null)
     {
@@ -37,25 +39,12 @@ app.MapGet("/api/orders/{id}", async (int id, IQueryHandler<GetOrderByIdQuery, O
     return Results.Ok(order);
 });
 
-
-app.MapGet("/api/orders", async (IQueryHandler<GetOrderSummariesQuery, List<OrderSummaryDto>> handler, CancellationToken cancellationToken) =>
-{
-    var orders = await handler.HandleAsync(new GetOrderSummariesQuery(), cancellationToken);
-
-    if (orders is null)
-    {
-        return Results.NotFound("No orders found.");
-    }
-
-    return Results.Ok(orders);
-});
-
 // POST /api/orders
-app.MapPost("/api/orders", async (CreateOrderCommand command, ICommandHandler<CreateOrderCommand, Order> handler, CancellationToken cancellationToken) =>
+app.MapPost("/api/orders", async (CreateOrderCommand command, IMediator mediator, CancellationToken cancellationToken) =>
 {
     try
     {
-        var order = await handler.Handle(command, cancellationToken);
+        var order = await mediator.Send(command, cancellationToken);
 
         return Results.Created(
             $"/api/orders/{order.OrderId}",
