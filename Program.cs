@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using OrderApi.Behaviors;
 using OrderApi.Commands;
 using OrderApi.Data;
+using OrderApi.Kafka;
 using OrderApi.Queries;
-using OrderManagement.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +21,7 @@ builder.Services.AddMediatR(cfg =>
 });
 
 builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderCommandValidator>();
+builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
 var app = builder.Build();
 
@@ -37,6 +38,23 @@ app.MapGet("/api/orders/{id}", async (int id, IMediator mediator, CancellationTo
     }
 
     return Results.Ok(order);
+
+});
+
+Console.WriteLine("v 1.03");
+
+
+// GET /api/orders/
+app.MapGet("/api/orders/", async ( IMediator mediator, CancellationToken cancellationToken) =>
+{
+    var orders = await mediator.Send(new GetOrderSummariesQuery(), cancellationToken);
+
+    if (orders is null)
+    {
+        return Results.NotFound("No orders found.");
+    }
+
+    return Results.Ok(orders);
 });
 
 // POST /api/orders

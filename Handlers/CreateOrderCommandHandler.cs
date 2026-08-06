@@ -1,8 +1,8 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using OrderApi.Commands;
 using OrderApi.Data;
 using OrderApi.Events;
+using OrderApi.Kafka;
 using OrderManagement.Models;
 
 namespace OrderApi.Handlers
@@ -11,11 +11,13 @@ namespace OrderApi.Handlers
     {
         private readonly AppDbContext _context;
         private readonly IPublisher _publisher;
+        private readonly IKafkaProducer _kafkaProducer;
 
-        public CreateOrderCommandHandler(AppDbContext context, IPublisher publisher)
+        public CreateOrderCommandHandler(AppDbContext context, IPublisher publisher, IKafkaProducer kafkaProducer)
         {
             _context = context;
             _publisher = publisher;
+            _kafkaProducer = kafkaProducer;
         }
 
         public async Task<Order> Handle(CreateOrderCommand command, CancellationToken cancellationToken)
@@ -31,10 +33,18 @@ namespace OrderApi.Handlers
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync(cancellationToken);
-            await _publisher.Publish(new OrderCreatedEvent(
+
+            var orderCreatedEvent = new OrderCreatedEvent(
                 order.OrderId,
                 $"{order.FirstName} {order.LastName}",
-                order.TotalCost), cancellationToken);
+                order.Status,
+                order.TotalCost);
+
+            // Publish to MediatR in-process handlers (e.g. console logger)
+            await _publisher.Publish(orderCreatedEvent, cancellationToken);
+
+            // Publish to Kafka topic "order"
+            await _kafkaProducer.PublishAsync("order", orderCreatedEvent, cancellationToken);
 
             return order;
         }

@@ -21,7 +21,9 @@ namespace OrderApi.Handlers
                 o.FirstName + " " + o.LastName,
                 o.Status,
                 o.TotalCost
-            )).ToListAsync(cancellationToken);
+            ))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
         }
     }
 }

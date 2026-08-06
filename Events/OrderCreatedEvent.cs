@@ -2,5 +2,5 @@ using MediatR;
 
 namespace OrderApi.Events
 {
-    public record OrderCreatedEvent(int OrderId, string CustomerName, decimal TotalCost) : INotification;
+    public record OrderCreatedEvent(int OrderId, string CustomerName, string Status, decimal TotalCost) : INotification;
 }

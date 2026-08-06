@@ -18,9 +18,9 @@ Content-Type: application/json
 
 {
   "orderNumber": "ORD-1001",
-  "firstName": "bRIDGET",
-  "lastName": "Focker",
-  "status": "Done",
+  "firstName": "Jane",
+  "lastName": "Bruno",
+  "status": "Placed",
   "totalCost": 19
 }
 
