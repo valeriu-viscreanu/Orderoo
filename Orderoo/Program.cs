@@ -66,7 +66,7 @@ app.MapPost("/api/orders", async (CreateOrderCommand command, IMediator mediator
 
         return Results.Created(
             $"/api/orders/{order.OrderId}",
-            new { OrderId = order.OrderId });
+            new { order.OrderId });
     }
     catch (ValidationException ex)
     {

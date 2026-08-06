@@ -16,7 +16,7 @@ services:
 
   orderapi:
     build:
-      context: .
+      context: ./Orderoo
       dockerfile: Dockerfile
     container_name: order_api
     ports:
@@ -25,6 +25,22 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       - Kafka__BootstrapServers=kafka:9092
+      - ConnectionStrings__SqlServerConnection=Server=sqlserver,1433;Database=OrderApi;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;MultipleActiveResultSets=true;
+    depends_on:
+      kafka:
+        condition: service_started
+      sqlserver:
+        condition: service_healthy
+
+  orderprocessor:
+    build:
+      context: ./OrderProcessor
+      dockerfile: Dockerfile
+    container_name: order_processor
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__Topic=order
       - ConnectionStrings__SqlServerConnection=Server=sqlserver,1433;Database=OrderApi;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;MultipleActiveResultSets=true;
     depends_on:
       kafka:

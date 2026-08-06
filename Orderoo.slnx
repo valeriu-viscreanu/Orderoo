@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Orderoo/OrderooAPI.csproj" />
+  <Project Path="OrderProcessor/OrderProcessor.csproj" />
+</Solution>

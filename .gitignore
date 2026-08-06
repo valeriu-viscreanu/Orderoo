@@ -5,3 +5,7 @@
 /.vs
 /bin/Debug/net10.0
 /obj
+/OrderProcessor/obj
+/OrderProcessor/bin/Debug/net10.0
+/Orderoo/obj
+/Orderoo/bin/Debug/net10.0
