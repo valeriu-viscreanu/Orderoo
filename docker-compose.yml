@@ -1,83 +1,26 @@
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sql_server
-    ports:
-      - "1433:1433"
-    environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=YourStrong@Password123
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Password123' -Q 'SELECT 1' -C || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   orderapi:
     build:
-      context: ./Orderoo
+      context: .\OrderApi
       dockerfile: Dockerfile
     container_name: order_api
     ports:
-      - "8086:8080"
+      - "8080:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - Kafka__BootstrapServers=kafka:9092
-      - ConnectionStrings__SqlServerConnection=Server=sqlserver,1433;Database=OrderApi;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;MultipleActiveResultSets=true;
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Port=5672
     depends_on:
-      kafka:
-        condition: service_started
-      sqlserver:
-        condition: service_healthy
+      - rabbitmq
 
-  orderprocessor:
-    build:
-      context: ./OrderProcessor
-      dockerfile: Dockerfile
-    container_name: order_processor
-    environment:
-      - DOTNET_ENVIRONMENT=Production
-      - Kafka__BootstrapServers=kafka:9092
-      - Kafka__Topic=order
-      - ConnectionStrings__SqlServerConnection=Server=sqlserver,1433;Database=OrderApi;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;MultipleActiveResultSets=true;
-    depends_on:
-      kafka:
-        condition: service_started
-      sqlserver:
-        condition: service_healthy
-
-  kafka:
-    image: apache/kafka:latest
-    container_name: kafka
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
     ports:
-      - "9092:9092"
-      - "9094:9094"
+      - "5672:5672"      # AMQP
+      - "15672:15672"    # Web UI
     environment:
-      # KRaft mode configuration (ZooKeeper-less)
-      KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094'
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
-      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9094'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka_ui
-    ports:
-      - "8085:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    depends_on:
-      - kafka
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
