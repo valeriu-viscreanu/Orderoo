@@ -1,7 +1,11 @@
 using FluentValidation;
 using MassTransit;
 using MediatR;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OrderApi.Behaviors;
 using OrderApi.Commands;
 using OrderApi.Data;
@@ -35,7 +39,32 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+// Add rate limiting services
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(options =>
+{
+    options.EnableEndpointRateLimiting = true;
+    options.StackBlockedRequests = false;
+    options.HttpStatusCode = 429;
+    options.RealIpHeader = "X-Real-IP";
+    options.ClientIdHeader = "X-ClientId";
+    options.GeneralRules = new List<RateLimitRule>
+    {
+        new RateLimitRule
+        {
+            Endpoint = "*",
+            Period = "10m",
+            Limit = 50
+        }
+    };
+});
+
+builder.Services.AddInMemoryRateLimiting();
+
 var app = builder.Build();
+
+// Configure rate limiting middleware
+app.UseIpRateLimiting();
 
 app.UseHttpsRedirection();
 
