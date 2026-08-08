@@ -1,4 +1,5 @@
 using FluentValidation;
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderApi.Behaviors;
@@ -21,6 +22,18 @@ builder.Services.AddMediatR(cfg =>
 });
 
 builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderCommandValidator>();
+
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("rabbitmq", "/", h =>
+        {
+            h.Username("admin");
+            h.Password("admin12");
+        });
+    });
+});
 
 var app = builder.Build();
 

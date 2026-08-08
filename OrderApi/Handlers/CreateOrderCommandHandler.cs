@@ -1,3 +1,4 @@
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderApi.Commands;
@@ -10,12 +11,12 @@ namespace OrderApi.Handlers
     public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Order>
     {
         private readonly AppDbContext _context;
-        private readonly IPublisher _publisher;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public CreateOrderCommandHandler(AppDbContext context, IPublisher publisher)
+        public CreateOrderCommandHandler(AppDbContext context, IPublishEndpoint publishEndpoint)
         {
             _context = context;
-            _publisher = publisher;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<Order> Handle(CreateOrderCommand command, CancellationToken cancellationToken)
@@ -31,7 +32,7 @@ namespace OrderApi.Handlers
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync(cancellationToken);
-            await _publisher.Publish(new OrderCreatedEvent(
+            await _publishEndpoint.Publish(new OrderCreatedEvent(
                 order.OrderId,
                 $"{order.FirstName} {order.LastName}",
                 order.TotalCost), cancellationToken);
