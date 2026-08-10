@@ -1,16 +1,12 @@
+using AspNetCoreRateLimit;
 using FluentValidation;
 using MassTransit;
 using MediatR;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using OrderApi.Behaviors;
 using OrderApi.Commands;
 using OrderApi.Data;
 using OrderApi.Queries;
-using OrderManagement.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,7 +34,7 @@ builder.Services.AddMassTransit(x =>
         });
     });
 });
-
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 // Add rate limiting services
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(options =>
@@ -99,5 +95,12 @@ app.MapPost("/api/orders", async (CreateOrderCommand command, IMediator mediator
             g => new[] { g.ErrorMessage }));
     }
 });
+
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+}
 
 app.Run();
