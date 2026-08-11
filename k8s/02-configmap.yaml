@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orderoo-config
+  namespace: orderoo
+  labels:
+    app.kubernetes.io/part-of: orderoo
+data:
+  # Mirrors the non-secret half of the orderapi environment in docker-compose.yml
+  ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_HTTP_PORTS: "8080"
+
+  # "rabbitmq" is the ClusterIP Service name in 20-rabbitmq.yaml
+  RabbitMq__Host: "rabbitmq"
+  RabbitMq__Port: "5672"

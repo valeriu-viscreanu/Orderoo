@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: orderoo
+
+resources:
+  - 00-namespace.yaml
+  - 01-secrets.yaml
+  - 02-configmap.yaml
+  - 10-sqlserver.yaml
+  - 20-rabbitmq.yaml
+  - 30-orderapi.yaml
+
+# No commonLabels here on purpose. commonLabels injects into Deployment
+# .spec.selector, which is immutable after creation -- that would make
+# `kubectl apply -k` and `kubectl apply -f` produce incompatible selectors,
+# so switching between them would fail. Every resource already carries
+# app.kubernetes.io/part-of: orderoo explicitly instead.
+
+# Swap the OrderApi tag without editing 30-orderapi.yaml:
+#   kustomize edit set image orderoo/orderapi=orderoo/orderapi:v1.2.3
+images:
+  - name: orderoo/orderapi
+    newTag: latest

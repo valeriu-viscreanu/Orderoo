@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sqlserver-data
+  namespace: orderoo
+  labels:
+    app.kubernetes.io/name: sqlserver
+    app.kubernetes.io/part-of: orderoo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName intentionally omitted -> uses the cluster default
+  # (kind ships local-path; Docker Desktop ships hostpath).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlserver
+  namespace: orderoo
+  labels:
+    app.kubernetes.io/name: sqlserver
+    app.kubernetes.io/part-of: orderoo
+spec:
+  replicas: 1
+  # Recreate, not RollingUpdate: the PVC is ReadWriteOnce, so a second pod
+  # could not attach the volume while the old one still holds it.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sqlserver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sqlserver
+        app.kubernetes.io/part-of: orderoo
+    spec:
+      securityContext:
+        # The mssql image runs as uid 10001; fsGroup makes the mounted PVC writable.
+        fsGroup: 10001
+      containers:
+        - name: sqlserver
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: mssql
+              containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_PID
+              value: "Developer"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: orderoo-secrets
+                  key: MSSQL_SA_PASSWORD
+          resources:
+            requests:
+              # SQL Server refuses to start with less than ~2Gi available.
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          # Same probe as the docker-compose healthcheck.
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" -C
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          # Liveness stays a cheap TCP check so a slow query cannot kill the pod.
+          livenessProbe:
+            tcpSocket:
+              port: mssql
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 5
+          # SQL Server can take a while on first boot (system db creation).
+          startupProbe:
+            tcpSocket:
+              port: mssql
+            periodSeconds: 10
+            failureThreshold: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/opt/mssql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: sqlserver-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver
+  namespace: orderoo
+  labels:
+    app.kubernetes.io/name: sqlserver
+    app.kubernetes.io/part-of: orderoo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: sqlserver
+  ports:
+    - name: mssql
+      port: 1433
+      targetPort: mssql
