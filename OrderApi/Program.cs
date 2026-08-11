@@ -98,6 +98,14 @@ app.MapPost("/api/orders", async (CreateOrderCommand command, IMediator mediator
     }
 });
 
+// GET /api/orders
+app.MapGet("/api/orders", async (IMediator mediator, CancellationToken cancellationToken) =>
+{
+    var orders = await mediator.Send(new GetOrderSummariesQuery(), cancellationToken);
+
+    return Results.Ok(orders);
+});
+
 
 using (var scope = app.Services.CreateScope())
 {

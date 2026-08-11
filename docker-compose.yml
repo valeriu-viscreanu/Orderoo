@@ -45,7 +45,7 @@ services:
       - RabbitMq__Port=5672
       - RabbitMq__Username=admin
       - RabbitMq__Password=admin123
-      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=OrderDb;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
+      - ConnectionStrings__SqlServerConnection=Server=sqlserver,1433;Database=OrderDb;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
     depends_on:
       rabbitmq:
         condition: service_healthy
