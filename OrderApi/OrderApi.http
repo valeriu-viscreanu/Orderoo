@@ -1,5 +1,5 @@
-@OrderApi_HostAddress = http://localhost:5260
-@Order = 8
+@OrderApi_HostAddress = http://localhost:8080
+@Order =1 
 
 ### Get order
 GET {{OrderApi_HostAddress}}/api/orders/{{Order}}
@@ -18,8 +18,8 @@ Content-Type: application/json
 
 {
   "orderNumber": "ORD-1001",
-  "firstName": "bRIDGET",
-  "lastName": "Focker",
+  "firstName": "SCroge",
+  "lastName": "McDiggy",
   "status": "Done",
   "totalCost": 19
 }

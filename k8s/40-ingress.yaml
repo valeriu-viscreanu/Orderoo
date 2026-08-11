@@ -1,0 +1,51 @@
+# Requires the ingress-nginx controller to be installed first (kind-specific
+# manifest, see k8s/README.md "Ingress" section) -- it provides the `nginx`
+# IngressClass these resources reference. Applying this file before that
+# controller exists is harmless; the Ingress objects just sit unserved until
+# the controller shows up and picks them up.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: orderapi
+  namespace: orderoo
+  labels:
+    app.kubernetes.io/name: orderapi
+    app.kubernetes.io/part-of: orderoo
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: orderapi.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: orderapi
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rabbitmq-ui
+  namespace: orderoo
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: orderoo
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: rabbitmq.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rabbitmq
+                # RabbitMQ's Service exposes both amqp (5672) and the
+                # management UI (15672) -- only the UI port makes sense
+                # behind an HTTP ingress.
+                port:
+                  number: 15672

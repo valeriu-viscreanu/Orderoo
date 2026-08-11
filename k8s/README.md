@@ -11,6 +11,7 @@ Kubernetes manifests translated from `docker-compose.yml`. Written for a local
 | `10-sqlserver.yaml` | SQL Server 2022 Deployment + PVC + Service |
 | `20-rabbitmq.yaml` | RabbitMQ 3 (management) Deployment + PVC + Service |
 | `30-orderapi.yaml` | OrderApi Deployment + Service |
+| `40-ingress.yaml` | Ingress routes for OrderApi and the RabbitMQ management UI |
 | `kustomization.yaml` | Ties them together for `kubectl apply -k` |
 
 ---
@@ -150,7 +151,31 @@ You must re-run this load step **every time you rebuild** the image.
 
 ---
 
-## Step 4 — Deploy
+## Step 4 — Install the ingress controller
+
+`40-ingress.yaml` routes traffic by hostname through an `nginx` ingress
+controller, but that controller is not built into Kubernetes — it has to be
+installed once per cluster. This is the official kind-specific manifest
+(pinned to a version so it doesn't silently change under you):
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.3/deploy/static/provider/kind/deploy.yaml
+```
+
+Wait for its pod to become ready before deploying the app — the Ingress
+objects apply fine either way, but nothing will route until this pod is up:
+
+```bash
+kubectl -n ingress-nginx wait --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=180s
+```
+
+If this step is skipped, `orderapi.local` / `rabbitmq.local` simply won't
+resolve to anything — `kubectl port-forward` on the individual Services
+(Step 6) always works regardless, since it doesn't go through ingress at all.
+
+---
+
+## Step 5 — Deploy
 
 ```bash
 kubectl apply -k k8s/
@@ -178,13 +203,35 @@ sqlserver-xxxxxxxxxx-xxxxx   1/1     Running   0          3m
 
 ---
 
-## Step 5 — Reach the services
+## Step 6 — Reach the services
 
-All Services are `ClusterIP` (internal only). `port-forward` is the most
-reliable way in on kind — NodePort needs port mappings baked in at cluster
-creation, which Docker Desktop controls.
+### OrderApi and RabbitMQ UI — via ingress (one port-forward, both routes)
 
-Each command below blocks; run it in its own terminal.
+Add these two lines to your hosts file
+(`C:\Windows\System32\drivers\etc\hosts`, needs admin/elevated editor):
+
+```
+127.0.0.1 orderapi.local
+127.0.0.1 rabbitmq.local
+```
+
+Then forward the ingress controller itself — a single command exposes both
+hostnames, since routing by `Host` header happens inside the cluster:
+
+```bash
+kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8080:80
+```
+
+Now reach them at:
+
+- OrderApi -> http://orderapi.local:8080
+- RabbitMQ management UI -> http://rabbitmq.local:8080 (`admin` / `admin123`)
+
+### Fallback — direct port-forward per service
+
+Still works, and is the only option for SQL Server (a raw TCP protocol,
+not HTTP — ingress doesn't apply to it). Each command below blocks; run it
+in its own terminal.
 
 **OrderApi** -> http://localhost:8080
 
@@ -206,18 +253,19 @@ kubectl -n orderoo port-forward svc/sqlserver 1433:1433
 
 ### Smoke test
 
-With the OrderApi forward running, in another terminal:
+With one of the OrderApi routes above forwarded, in another terminal:
 
 ```bash
-curl http://localhost:8080/api/orders
+curl http://orderapi.local:8080/api/orders
 ```
 
-`[]` (or a list) means the API is up and its migration against SQL Server
+(or `http://localhost:8080/api/orders` if using the direct fallback.) `[]`
+(or a list) means the API is up and its migration against SQL Server
 succeeded. There is no `/health` endpoint — see *Notes* below.
 
 ---
 
-## Step 6 — Tear down
+## Step 7 — Tear down
 
 Delete the workloads but keep the data volumes:
 
@@ -229,6 +277,14 @@ Delete everything including the PVCs (SQL Server and RabbitMQ data):
 
 ```bash
 kubectl delete namespace orderoo
+```
+
+The ingress controller lives in its own `ingress-nginx` namespace (installed
+in Step 4) and isn't touched by either command above. Remove it separately if
+you want it gone too:
+
+```bash
+kubectl delete namespace ingress-nginx
 ```
 
 ---
@@ -259,6 +315,15 @@ let you switch to real HTTP probes that actually verify SQL and RabbitMQ.
 **initContainers replace `depends_on`.** Kubernetes has no equivalent of
 compose's `condition: service_healthy`, so `orderapi` blocks on two busybox
 initContainers that wait for `sqlserver:1433` and `rabbitmq:5672`.
+
+**Ingress over NodePort/LoadBalancer.** `LoadBalancer` needs a cloud provider
+(or MetalLB) to ever leave `<pending>`; `NodePort` on kind only reaches your
+host if the cluster was created with `extraPortMappings`, which Docker
+Desktop's cluster wasn't. `Ingress` sidesteps both — one `port-forward` to the
+ingress controller's Service exposes every hostname-routed backend behind it,
+instead of one `port-forward` per Service. SQL Server, being raw TCP rather
+than HTTP, still needs its own direct `port-forward` — ingress only routes
+HTTP(S) traffic.
 
 **`Recreate` strategy on the stateful services.** Their PVCs are
 `ReadWriteOnce`; a rolling update would deadlock with the new pod unable to

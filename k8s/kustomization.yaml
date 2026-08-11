@@ -10,6 +10,7 @@ resources:
   - 10-sqlserver.yaml
   - 20-rabbitmq.yaml
   - 30-orderapi.yaml
+  - 40-ingress.yaml
 
 # No commonLabels here on purpose. commonLabels injects into Deployment
 # .spec.selector, which is immutable after creation -- that would make
